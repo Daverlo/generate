@@ -198,9 +198,6 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 			Required:    contains(schema.Required, propKey),
 			Description: prop.Description,
 		}
-		if f.Required {
-			strct.GenerateCode = true
-		}
 		strct.Fields[f.Name] = f
 	}
 	// additionalProperties with typed sub-schema
