@@ -83,6 +83,10 @@ func Output(w io.Writer, g *Generator, pkg string) {
 			if f.Required {
 				omitempty = ""
 			}
+			// If the field must be ignored do not apply omitempty
+			if f.JSONName == "-" {
+				omitempty = ""
+			}
 
 			if f.Description != "" {
 				outputFieldDescriptionComment(f.Description, w)
