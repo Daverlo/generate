@@ -99,60 +99,53 @@ func Output(w io.Writer, g *Generator, pkg string) {
 }
 
 func emitMarshalCode(w io.Writer, s Struct, imports map[string]bool) {
-	imports["bytes"] = true
 	fmt.Fprintf(w,
 		`
 func (strct *%s) MarshalJSON() ([]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0))
-	buf.WriteString("{")
 `, s.Name)
 
-	if len(s.Fields) > 0 {
-		fmt.Fprintf(w, "    comma := false\n")
-		// Marshal all the defined fields
-		for _, fieldKey := range getOrderedFieldNames(s.Fields) {
-			f := s.Fields[fieldKey]
-			if f.JSONName == "-" {
-				continue
-			}
-			if f.Required {
-				fmt.Fprintf(w, "    // \"%s\" field is required\n", f.Name)
-				// currently only objects are supported
-				if strings.HasPrefix(f.Type, "*") {
-					imports["errors"] = true
-					fmt.Fprintf(w, `    if strct.%s == nil {
-        return nil, errors.New("%s is a required field")
-    }
+	for _, fieldKey := range getOrderedFieldNames(s.Fields) {
+		f := s.Fields[fieldKey]
+		if f.JSONName == "-" {
+			continue
+		}
+		if f.Required {
+			fmt.Fprintf(w, "    // \"%s\" field is required\n", f.Name)
+			// currently only objects are supported
+			if strings.HasPrefix(f.Type, "*") {
+				imports["errors"] = true
+				fmt.Fprintf(w, `    if strct.%s == nil {
+return nil, errors.New("%s is a required field")
+}
 `, f.Name, f.JSONName)
-				} else {
-					fmt.Fprintf(w, "    // only required object types supported for marshal checking (for now)\n")
-				}
+			} else {
+				fmt.Fprintf(w, "    // only required object types supported for marshal checking (for now)\n")
 			}
-
-			fmt.Fprintf(w,
-				`    // Marshal the "%[1]s" field
-    if comma { 
-        buf.WriteString(",") 
-    }
-    buf.WriteString("\"%[1]s\": ")
-	if tmp, err := json.Marshal(strct.%[2]s); err != nil {
-		return nil, err
- 	} else {
- 		buf.Write(tmp)
-	}
-	comma = true
-`, f.JSONName, f.Name)
 		}
 	}
+	fmt.Fprintf(w,
+		`
+		type %[1]s_ %[1]s
+		rv, err := json.Marshal(%[1]s_(*strct))
+		if err != nil {
+			return nil, err
+		}
+	`, s.Name)
+
 	if s.AdditionalType != "" {
 		if s.AdditionalType != "false" {
 			imports["fmt"] = true
-
-			if len(s.Fields) == 0 {
+			imports["bytes"] = true
+			fmt.Fprintf(w, "    // Marshal any additional Properties\n")
+			if len(s.Fields) > 0 {
+				fmt.Fprintf(w, "    comma := true\n")
+			} else {
 				fmt.Fprintf(w, "    comma := false\n")
 			}
-
-			fmt.Fprintf(w, "    // Marshal any additional Properties\n")
+			fmt.Fprintf(w,
+				`
+			buf := bytes.NewBuffer(make([]byte, 0))
+`)
 			// Marshal any additional Properties
 			fmt.Fprintf(w, `    for k, v := range strct.AdditionalProperties {
 		if comma {
@@ -166,13 +159,14 @@ func (strct *%s) MarshalJSON() ([]byte, error) {
 		}
         comma = true
 	}
+	rv = append(rv[0:len(rv)-1], buf.Bytes()...)
+	rv = append(rv, '}')
 `)
 		}
 	}
 
 	fmt.Fprintf(w, `
-	buf.WriteString("}")
-	rv := buf.Bytes()
+	
 	return rv, nil
 }
 `)
