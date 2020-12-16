@@ -31,7 +31,7 @@ test/%_gen/generated.go: test/%.json
 
 .PHONY: test codecheck fmt lint vet
 
-test: $(BIN) $(GENERATED_SOURCE)
+test: clean $(BIN) $(GENERATED_SOURCE)
 	@echo "\n+ Executing tests for $(PKG)"
 	go test -v -race -cover $(PKG)/...
     
