@@ -59,7 +59,7 @@ func TestFieldGeneration(t *testing.T) {
 		"property8": {TypeValue: "object", Title: "SubObj5", Properties: map[string]*Schema{"name": {TypeValue: "string"}}, AdditionalProperties: &AdditionalProperties{TypeValue: "integer"}},
 	}
 
-	requiredFields := []string{"property2"}
+	requiredFields := []string{"property1", "property2"}
 
 	root := Schema{
 		SchemaType: "http://localhost",
